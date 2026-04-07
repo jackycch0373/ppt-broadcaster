@@ -91,5 +91,15 @@ io.on('connection', (socket) => {
     });
 });
 
+setInterval(() => {
+    const now = Date.now();
+    for (const id in activeRooms) {
+        // If room hasn't been updated in 2 hours, delete it
+        if (now - activeRooms[id].lastUpdate > 7200000) {
+            delete activeRooms[id];
+        }
+    }
+}, 600000); // Check every 10 mins
+
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => console.log('Server running on port ' + PORT));
