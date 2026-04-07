@@ -1,79 +1,95 @@
-// server.js
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+const { v4: uuidv4 } = require('uuid'); // Install this: npm install uuid
 
-// Increase JSON limit to handle large Base64 images from PowerPoint
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
 
-// --- WEB API ENDPOINT (For the PowerPoint VBA Plug-in) ---
-app.post('/api/slide/update', (req, res) => {
-    try {
-        const { status, slideImage } = req.body;
-        
-        console.log(`Received slide update. Status: ${status}`);
-        
-        // Broadcast the update to all connected web viewers instantly
-        io.emit('slide_changed', { status, slideImage });
-        
-        res.status(200).json({ message: 'Slide broadcasted successfully' });
-    } catch (error) {
-        console.error("Error processing slide update:", error);
-        res.status(500).send("Internal Server Error");
+// Memory store for active rooms
+const activeRooms = {};
+
+// 1. Initialize a Room (Called by VBA Start)
+app.post('/api/init', (req, res) => {
+    const roomId = uuidv4().substring(0, 8); // Generate short unique ID
+    activeRooms[roomId] = {
+        lastImage: null,
+        status: 'active',
+        expiryTimer: null
+    };
+    
+    // Remote URL for this presentation
+    const presentationUrl = `https://${req.get('host')}/room/${roomId}`;
+    res.json({ roomId: roomId, url: presentationUrl });
+});
+
+// 2. Update Slide (Called by VBA Event)
+app.post('/api/update', (req, res) => {
+    const { roomId, slideImage } = req.body;
+    if (activeRooms[roomId]) {
+        activeRooms[roomId].lastImage = slideImage;
+        // Broadcast only to people in this specific room
+        io.to(roomId).emit('slide_update', slideImage);
+        res.sendStatus(200);
+    } else {
+        res.status(404).send('Room not found');
     }
 });
 
-// --- FRONTEND WEBSITE (For the Viewers) ---
-app.get('/', (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Live Presentation</title>
-            <style>
-                body { 
-                    background: #111; display: flex; justify-content: center; 
-                    align-items: center; height: 100vh; margin: 0; 
-                    color: white; font-family: sans-serif;
-                }
-                img { 
-                    max-width: 95%; max-height: 95vh; 
-                    box-shadow: 0 0 20px rgba(0,0,0,0.8); 
-                    border-radius: 8px;
-                }
-                #status { font-size: 24px; color: #888; }
-            </style>
-        </head>
-        <body>
-            <div id="status">Waiting for presenter to start...</div>
-            <img id="currentSlide" src="" style="display:none;" />
-            
-            <script src="/socket.io/socket.io.js"></script>
-            <script>
-                const socket = io();
-                const statusDiv = document.getElementById('status');
-                const img = document.getElementById('currentSlide');
+// 3. Stop Presentation (Called by VBA Stop)
+app.post('/api/stop', (req, res) => {
+    const { roomId } = req.body;
+    if (activeRooms[roomId]) {
+        // Set a timer to delete room in 60 seconds
+        activeRooms[roomId].expiryTimer = setTimeout(() => {
+            delete activeRooms[roomId];
+            console.log(`Room ${roomId} deleted after 1 minute.`);
+        }, 60000);
+        
+        io.to(roomId).emit('status_update', 'This presentation has ended and will close soon.');
+        res.send('Room scheduled for deletion.');
+    }
+});
 
-                socket.on('slide_changed', (data) => {
-                    if(data.status === "active") {
-                        statusDiv.style.display = 'none';
-                        img.src = data.slideImage;
-                        img.style.display = 'block';
-                    } else if (data.status === "ended") {
-                        statusDiv.innerText = "Presentation Ended.";
-                        statusDiv.style.display = 'block';
-                        img.style.display = 'none';
-                    }
-                });
-            </script>
-        </body>
+// 4. Viewer Page (The Frontend)
+app.get('/room/:id', (req, res) => {
+    res.send(`
+        <html>
+            <head>
+                <title>Live Room ${req.params.id}</title>
+                <style>body{background:#111; color:white; display:flex; justify:center; align-items:center; height:100vh; margin:0;} img{max-width:100%; max-height:100%;}</style>
+            </head>
+            <body>
+                <div id="msg">Waiting for slide...</div>
+                <img id="slide" />
+                <script src="/socket.io/socket.io.js"></script>
+                <script>
+                    const socket = io();
+                    const roomId = "${req.params.id}";
+                    socket.emit('join_room', roomId);
+                    socket.on('slide_update', (imgData) => {
+                        document.getElementById('msg').style.display = 'none';
+                        document.getElementById('slide').src = imgData;
+                    });
+                    socket.on('status_update', (msg) => {
+                        alert(msg);
+                    });
+                </script>
+            </body>
         </html>
     `);
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+// Socket.io Room Logic
+io.on('connection', (socket) => {
+    socket.on('join_room', (roomId) => {
+        socket.join(roomId);
+        // If room exists, send current image immediately
+        if (activeRooms[roomId] && activeRooms[roomId].lastImage) {
+            socket.emit('slide_update', activeRooms[roomId].lastImage);
+        }
+    });
 });
+
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => console.log('Server running on port ' + PORT));
