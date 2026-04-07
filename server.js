@@ -11,7 +11,7 @@ const activeRooms = {};
 
 // 1. Initialize a Room (Called by VBA Start)
 app.post('/api/init', (req, res) => {
-    const roomId = uuidv4().substring(0, 8); // Generate short unique ID
+    const roomId = uuidv4().substring(0, 16); // Generate short unique ID
     activeRooms[roomId] = {
         lastImage: null,
         status: 'active',
