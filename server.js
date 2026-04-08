@@ -100,28 +100,17 @@ app.post('/api/update', (req, res) => {
     }
 });
 
-// Receive status updates (active/paused)
-app.post('/api/status', (req, res) => {
-    const { roomId, status } = req.body;
-    if (activeRooms[roomId]) {
-        activeRooms[roomId].status = status;
-        io.to(roomId).emit('status_change', status);
-        res.sendStatus(200);
-    }
-});
-
 // 3. Stop Presentation (Called by VBA Stop)
 app.post('/api/stop', (req, res) => {
     const { roomId } = req.body;
     if (activeRooms[roomId]) {
-        io.to(roomId).emit('status_update', 'This presentation has ended and will close in 30 seconds.');
-        
-        // 30 second elimination timer
-        setTimeout(() => {
+        // Set a timer to delete room in 60 seconds
+        activeRooms[roomId].expiryTimer = setTimeout(() => {
             delete activeRooms[roomId];
-            console.log(`Room ${roomId} eliminated.`);
-        }, 30000);
-
+            console.log(`Room ${roomId} deleted after 1 minute.`);
+        }, 60000);
+        
+        io.to(roomId).emit('status_update', 'This presentation has ended and will close soon.');
         res.send('Room scheduled for deletion.');
     }
 });
@@ -179,61 +168,45 @@ app.get('/room/:id', (req, res) => {
                         border-radius: 10px;
                         background: rgba(255,255,255,0.05);
                     }
-                    
-                    #overlay {
-                        position: fixed; 
-                        top: 20px; 
-                        left: 50%; 
-                        transform: translateX(-50%);
-                        background: rgba(255, 0, 0, 0.8);
-                        color: white; 
-                        padding: 10px 20px;
-                        border-radius: 5px; 
-                        display: none; 
-                        z-index: 100; 
-                        font-weight: bold;
-                    }
-                    
                 </style>
             </head>
             <body>
-                <div id="overlay"></div>
                 <div class="content-wrapper">
                     <div id="msg">Waiting for the presenter to start...</div>
                     <img id="slide" alt="Current Slide" />
                 </div>
                 <script src="/socket.io/socket.io.js"></script>
-                <script>
-                    // Force a brand new connection for this tab only
-                    const socket = io({
-                        forceNew: true,
-                        reconnectionAttempts: 3,
-                        timeout: 10000,
-                        transports: ['polling', 'websocket']
-                    });
-                
-                    const roomId = "${req.params.id}";
-                
-                    // Ensure we join the room as soon as the connection is established
-                    socket.on('connect', () => {
-                        console.log("Connected with ID: " + socket.id);
-                        socket.emit('join_room', roomId);
-                    });
-                
-                    socket.on('slide_update', (imgData) => {
-                        if(!imgData) return;
-                        document.getElementById('msg').style.display = 'none';
-                        const img = document.getElementById('slide');
-                        img.src = imgData;
-                        img.style.display = 'block';
-                    });
-                
-                    // If the server disconnects, try to reconnect automatically
-                    socket.on('disconnect', () => {
-                        document.getElementById('msg').style.display = 'block';
-                        document.getElementById('msg').innerText = "Reconnecting...";
-                    });
-                </script>
+            <script>
+                // Force a brand new connection for this tab only
+                const socket = io({
+                    forceNew: true,
+                    reconnectionAttempts: 3,
+                    timeout: 10000,
+                    transports: ['polling', 'websocket']
+                });
+            
+                const roomId = "${req.params.id}";
+            
+                // Ensure we join the room as soon as the connection is established
+                socket.on('connect', () => {
+                    console.log("Connected with ID: " + socket.id);
+                    socket.emit('join_room', roomId);
+                });
+            
+                socket.on('slide_update', (imgData) => {
+                    if(!imgData) return;
+                    document.getElementById('msg').style.display = 'none';
+                    const img = document.getElementById('slide');
+                    img.src = imgData;
+                    img.style.display = 'block';
+                });
+            
+                // If the server disconnects, try to reconnect automatically
+                socket.on('disconnect', () => {
+                    document.getElementById('msg').style.display = 'block';
+                    document.getElementById('msg').innerText = "Reconnecting...";
+                });
+            </script>
             </body>
         </html>
     `);
