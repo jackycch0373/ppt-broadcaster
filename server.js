@@ -9,6 +9,64 @@ app.use(express.json({ limit: '10mb' }));
 // Memory store for active rooms
 const activeRooms = {};
 
+// --- NEW: Landing Page (The "/" Route) ---
+app.get('/', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>PPT Live Streamer - Welcome</title>
+            <style>
+                body, html {
+                    margin: 0; padding: 0; width: 100%; height: 100%;
+                    background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
+                    color: white; font-family: 'Segoe UI', Arial, sans-serif;
+                    display: flex; justify-content: center; align-items: center;
+                }
+                .container {
+                    text-align: center;
+                    padding: 40px;
+                    background: rgba(0, 0, 0, 0.3);
+                    border-radius: 20px;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+                    max-width: 600px;
+                    width: 90%;
+                }
+                h1 { font-size: 2.5rem; margin-bottom: 10px; color: #00d2ff; }
+                p { font-size: 1.1rem; line-height: 1.6; color: #ccc; }
+                .status-badge {
+                    display: inline-block;
+                    padding: 8px 20px;
+                    background: #27ae60;
+                    color: white;
+                    border-radius: 50px;
+                    font-weight: bold;
+                    margin-top: 20px;
+                    font-size: 0.9rem;
+                }
+                .footer { margin-top: 30px; font-size: 0.8rem; color: #777; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>PPT Live Streamer</h1>
+                <p>Welcome! This is a real-time PowerPoint slide publication service.</p>
+                <p>To view a live presentation, please scan the <strong>QR Code</strong> shown on the presenter's screen or use the <strong>Unique URL</strong> provided to you.</p>
+                
+                <div class="status-badge">● Server is Active</div>
+                
+                <div class="footer">
+                    VBA Plug-in Extension | Room Architecture v2.0
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+});
+
 // 1. Initialize a Room (Called by VBA Start)
 app.post('/api/init', (req, res) => {
     const roomId = uuidv4().substring(0, 16); // Generate short unique ID
