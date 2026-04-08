@@ -1,8 +1,14 @@
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
 const { v4: uuidv4 } = require('uuid');
+const io = require('socket.io')(http, {
+    cors: { origin: "*" },
+    // DISBALE cookies to prevent multiple tabs from conflicting
+    cookie: false, 
+    // Allow both methods for better compatibility
+    transports: ['polling', 'websocket'] 
+});
 
 app.use(express.json({ limit: '20mb' }));
 
@@ -10,7 +16,7 @@ app.use(express.json({ limit: '20mb' }));
 const activeRooms = {};
 
 // --- NEW: Landing Page (The "/" Route) ---
-app.get('/', (req, res) => {
+app.get('/index', (req, res) => {
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
@@ -170,22 +176,37 @@ app.get('/room/:id', (req, res) => {
                     <img id="slide" alt="Current Slide" />
                 </div>
                 <script src="/socket.io/socket.io.js"></script>
-                <script>
-                    const socket = io();
-                    const roomId = "${req.params.id}";
+            <script>
+                // Force a brand new connection for this tab only
+                const socket = io({
+                    forceNew: true,
+                    reconnectionAttempts: 3,
+                    timeout: 10000,
+                    transports: ['polling', 'websocket']
+                });
+            
+                const roomId = "${req.params.id}";
+            
+                // Ensure we join the room as soon as the connection is established
+                socket.on('connect', () => {
+                    console.log("Connected with ID: " + socket.id);
                     socket.emit('join_room', roomId);
-                    socket.on('slide_update', (imgData) => {
-                        if (!imgData) return; // Ignore empty data
-                        const msg = document.getElementById('msg');
-                        const img = document.getElementById('slide');
-                        msg.style.display = 'none';  // Hide the "Waiting" text
-                        img.src = imgData;           // Set the Base64 image
-                        img.style.display = 'block'; // Make the image visible
-                    });
-                    socket.on('status_update', (msg) => {
-                        alert(msg);
-                    });
-                </script>
+                });
+            
+                socket.on('slide_update', (imgData) => {
+                    if(!imgData) return;
+                    document.getElementById('msg').style.display = 'none';
+                    const img = document.getElementById('slide');
+                    img.src = imgData;
+                    img.style.display = 'block';
+                });
+            
+                // If the server disconnects, try to reconnect automatically
+                socket.on('disconnect', () => {
+                    document.getElementById('msg').style.display = 'block';
+                    document.getElementById('msg').innerText = "Reconnecting...";
+                });
+            </script>
             </body>
         </html>
     `);
