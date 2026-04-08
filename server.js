@@ -197,6 +197,7 @@ app.get('/room/:id', (req, res) => {
                 </style>
             </head>
             <body>
+                <div id="overlay"></div>
                 <div class="content-wrapper">
                     <div id="msg">
                         <div style="font-size: 2rem; color: #00d2ff; margin-bottom: 10px;">Room Joined</div>
