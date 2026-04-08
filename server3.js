@@ -4,7 +4,8 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const { v4: uuidv4 } = require('uuid'); 
 
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Memory store for active rooms
 const activeRooms = {};
@@ -25,6 +26,7 @@ app.post('/api/init', (req, res) => {
 
 // 2. Update Slide (Called by VBA Event)
 app.post('/api/update', (req, res) => {
+    console.log("Update received for room:", req.body.roomId); // Add this line
     const { roomId, slideImage, elements } = req.body;
     if (activeRooms[roomId]) {
         // Store both the image and the interactive elements
@@ -225,43 +227,33 @@ app.get('/room/:id', (req, res) => {
                     socket.emit('join_room', roomId);
 
                     socket.on('slide_update', (data) => {
+                        // 1. Data Structure Check (handles both old and new format)
+                        const slideData = data.image ? data : { image: data, elements: [] };
+                        
                         document.getElementById('msg').style.display = 'none';
                         const container = document.getElementById('container');
                         const img = document.getElementById('slide');
                         
-                        // Hide message and show image
-                        msg.style.display = 'none';
-                        img.src = imgData;
-                        img.style.display = 'block';
-                        img.style.opacity = 1;
-
-                         // 1. Update Image
-                        img.src = data.image;
+                        img.src = slideData.image;
                         
-                        // 2. Clear old links
-                        const oldElements = document.querySelectorAll('.interactive-element');
-                        oldElements.forEach(el => el.remove());
-
-                        const oldElements = document.querySelectorAll('.interactive-element');
-                        oldElements.forEach(el => el.remove());
-
-                        // 3. Inject new Interactive Zones
-                        data.elements.forEach(el => {
-                            const div = document.createElement('div');
-                            div.className = 'interactive-element';
-                            if(el.type === 'video') div.className += ' video-placeholder';
-                            
-                            div.style.left = el.left + '%';
-                            div.style.top = el.top + '%';
-                            div.style.width = el.width + '%';
-                            div.style.height = el.height + '%';
-                            
-                            div.onclick = () => {
-                                if(el.url) window.open(el.url, '_blank');
-                                else alert("This is a video element. Due to PPT restrictions, please view it on the presenter's shared screen.");
-                            };
-                            container.appendChild(div);
-                        });
+                        // 2. Clear previous elements
+                        const elements = document.querySelectorAll('.interactive-element');
+                        elements.forEach(e => e.remove());
+                    
+                        // 3. Add new elements if they exist
+                        if(slideData.elements && Array.isArray(slideData.elements)) {
+                            slideData.elements.forEach(el => {
+                                const div = document.createElement('a'); // Use <a> tag for better interaction
+                                div.className = 'interactive-element';
+                                div.style.left = el.left + '%';
+                                div.style.top = el.top + '%';
+                                div.style.width = el.width + '%';
+                                div.style.height = el.height + '%';
+                                div.href = el.url || '#';
+                                div.target = '_blank';
+                                container.appendChild(div);
+                            });
+                        }
                     });
 
                     socket.on('status_update', (msg) => {
