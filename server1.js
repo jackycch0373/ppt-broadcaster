@@ -40,14 +40,24 @@ app.post('/api/update', (req, res) => {
 app.post('/api/stop', (req, res) => {
     const { roomId } = req.body;
     if (activeRooms[roomId]) {
-        // Set a timer to delete room in 60 seconds
-        activeRooms[roomId].expiryTimer = setTimeout(() => {
-            delete activeRooms[roomId];
-            console.log(`Room ${roomId} deleted after 1 minute.`);
-        }, 60000);
+        activeRooms[roomId].status = 'ending';
         
-        io.to(roomId).emit('status_update', 'This presentation has ended and will close in one minute.');
-        res.send('Room scheduled for deletion.');
+        // 1. Tell all current viewers that it's ending
+        io.to(roomId).emit('status_update', 'The presenter has stopped the live. Redirecting to homepage in 1 minute...');
+        
+        // 2. Set the 60-second timer
+        setTimeout(() => {
+            // Send the final redirect command to all clients in the room
+            io.to(roomId).emit('redirect_home');
+            
+            // 3. ABORT: Completely wipe the room from server memory
+            delete activeRooms[roomId]; 
+            console.log(`Room ${roomId} has been purged and aborted.`);
+        }, 60000); 
+        
+        res.status(200).send('Shutdown sequence initiated.');
+    } else {
+        res.status(404).send('Room not found.');
     }
 });
 
@@ -111,6 +121,14 @@ app.get('/', (req, res) => {
   
 // 4. Viewer Page (The Frontend)
 app.get('/room/:id', (req, res) => {
+
+    const roomId = req.params.id;
+
+    // ABORT CHECK: If room doesn't exist in memory, kick them to root immediately
+    if (!activeRooms[roomId]) {
+        return res.redirect('/');
+    }
+    
     res.send(`
         <!DOCTYPE html>
         <html>
@@ -191,9 +209,16 @@ app.get('/room/:id', (req, res) => {
                         img.style.opacity = 1;
                     });
 
-                    socket.on('status_update', (text) => {
-                        document.getElementById('slide').style.opacity = 0.3;
-                        alert(text);
+                    socket.on('status_update', (msg) => {
+                        // Show a message overlay or alert
+                        const msgDiv = document.getElementById('msg');
+                        msgDiv.innerText = msg;
+                        msgDiv.style.display = 'block';
+                        document.getElementById('slide').style.opacity = '0.3';
+                    });
+
+                    socket.on('redirect_home', () => {
+                        window.location.href = '/'; // Kick user back to the welcome page
                     });
 
                 </script>
