@@ -28,13 +28,17 @@ app.post('/api/update', (req, res) => {
     const { roomId, slideImage, status } = req.body;
     
     if (activeRooms[roomId]) {
-        if (status === 'offline') {
-            activeRooms[roomId].lastImage = null; // Clear last image
-            io.to(roomId).emit('status_change', 'The presenter is not in the slideshow now.');
-        } else {
-            activeRooms[roomId].lastImage = slideImage;
-            io.to(roomId).emit('slide_update', slideImage);
-        }
+        // Prepare the state object
+        const roomState = {
+            active: (status !== 'offline'),
+            image: slideImage || null,
+            message: (status === 'offline') ? "The presenter has stepped away. Please wait..." : "Waiting for stream..."
+        };
+
+        activeRooms[roomId].lastImage = roomState.active ? slideImage : null;
+        
+        // Send the full state to the viewers
+        io.to(roomId).emit('sync_state', roomState);
         res.sendStatus(200);
     } else {
         res.status(404).send('Room not found');
@@ -138,15 +142,7 @@ app.get('/room/:id', (req, res) => {
                     }
 
                     /* Main Content Container */
-                    .content-wrapper {
-                        text-align: center;
-                        width: 95%;
-                        max-width: 1200px;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                    }
+                    #slide-container { display: none; width: 100%; height: 100%; justify-content: center; align-items: center; }
 
                     /* Slide Image Styling */
                     #slide {
@@ -156,6 +152,7 @@ app.get('/room/:id', (req, res) => {
                         border-radius: 8px;
                         display: none; /* Hidden until first slide loads */
                         transition: opacity 0.5s ease-in-out;
+                        object-fit: contain;
                     }
 
                     /* Waiting Message Styling */
@@ -167,16 +164,24 @@ app.get('/room/:id', (req, res) => {
                         border-radius: 10px;
                         background: rgba(255,255,255,0.05);
                     }
+
+                    /* Container for the message */
+                    #message-container { display: block; text-align: center; padding: 20px; font-size: 1.5rem; color: #aaa; }
+                    
                     img {
                         max-width:100%; 
                         max-height:100%;
                     }
+                    
                 </style>
             </head>
             <body>
-                <div class="content-wrapper">
-                    <div id="msg">Waiting for the presenter to start...</div>
-                    <img id="slide" alt="Current Slide" />
+                <div id="slide-container">
+                    <img id="slide" />
+                </div>
+                
+                <div id="message-container">
+                    <div id="msg-text">Connecting to presentation...</div>
                 </div>
 
                 <script src="/socket.io/socket.io.js"></script>
@@ -186,22 +191,24 @@ app.get('/room/:id', (req, res) => {
 
                     socket.on('connect', () => { socket.emit('join_room', roomId); });
 
-                    // Handle incoming slides
-                    socket.on('slide_update', (imgData) => {
-                        document.getElementById('msg').style.display = 'none';
-                        const img = document.getElementById('slide');
-                        img.src = imgData;
-                        img.style.display = 'block';
-                    });
+                    socket.on('sync_state', (data) => {
+                    const slideCont = document.getElementById('slide-container');
+                    const msgCont = document.getElementById('message-container');
+                    const img = document.getElementById('slide');
+                    const txt = document.getElementById('msg-text');
 
-                    // Handle presenter leaving/returning
-                    socket.on('status_change', (message) => {
-                        const msg = document.getElementById('msg');
-                        const img = document.getElementById('slide');
-                        
-                        img.style.display = 'none';
-                        msg.innerText = message;
-                        msg.style.display = 'block';
+                    if (data.active && data.image) {
+                        // SHOW IMAGE, HIDE MESSAGE
+                        img.src = data.image;
+                        slideCont.style.display = 'flex';
+                        msgCont.style.display = 'none';
+                    } else {
+                        // HIDE IMAGE, SHOW MESSAGE
+                        img.src = ""; // Clear the source to prevent broken icon
+                        slideCont.style.display = 'none';
+                        txt.innerText = data.message;
+                        msgCont.style.display = 'block';
+                    }
                     });
                 </script>
             </body>
