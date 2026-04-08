@@ -4,7 +4,7 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const { v4: uuidv4 } = require('uuid');
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '20mb' }));
 
 // Memory store for active rooms
 const activeRooms = {};
@@ -175,8 +175,12 @@ app.get('/room/:id', (req, res) => {
                     const roomId = "${req.params.id}";
                     socket.emit('join_room', roomId);
                     socket.on('slide_update', (imgData) => {
-                        document.getElementById('msg').style.display = 'none';
-                        document.getElementById('slide').src = imgData;
+                        if (!imgData) return; // Ignore empty data
+                        const msg = document.getElementById('msg');
+                        const img = document.getElementById('slide');
+                        msg.style.display = 'none';  // Hide the "Waiting" text
+                        img.src = imgData;           // Set the Base64 image
+                        img.style.display = 'block'; // Make the image visible
                     });
                     socket.on('status_update', (msg) => {
                         alert(msg);
