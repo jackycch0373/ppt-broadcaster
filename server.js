@@ -100,17 +100,28 @@ app.post('/api/update', (req, res) => {
     }
 });
 
+// Receive status updates (active/paused)
+app.post('/api/status', (req, res) => {
+    const { roomId, status } = req.body;
+    if (activeRooms[roomId]) {
+        activeRooms[roomId].status = status;
+        io.to(roomId).emit('status_change', status);
+        res.sendStatus(200);
+    }
+});
+
 // 3. Stop Presentation (Called by VBA Stop)
 app.post('/api/stop', (req, res) => {
     const { roomId } = req.body;
     if (activeRooms[roomId]) {
-        // Set a timer to delete room in 60 seconds
-        activeRooms[roomId].expiryTimer = setTimeout(() => {
-            delete activeRooms[roomId];
-            console.log(`Room ${roomId} deleted after 1 minute.`);
-        }, 60000);
+        io.to(roomId).emit('status_update', 'This presentation has ended and will close in 30 seconds.');
         
-        io.to(roomId).emit('status_update', 'This presentation has ended and will close soon.');
+        // 30 second elimination timer
+        setTimeout(() => {
+            delete activeRooms[roomId];
+            console.log(`Room ${roomId} eliminated.`);
+        }, 30000);
+
         res.send('Room scheduled for deletion.');
     }
 });
@@ -168,45 +179,101 @@ app.get('/room/:id', (req, res) => {
                         border-radius: 10px;
                         background: rgba(255,255,255,0.05);
                     }
+                    
+                    #overlay {
+                        position: fixed; 
+                        top: 20px; 
+                        left: 50%; 
+                        transform: translateX(-50%);
+                        background: rgba(255, 0, 0, 0.8);
+                        color: white; 
+                        padding: 10px 20px;
+                        border-radius: 5px; 
+                        display: none; 
+                        z-index: 100; 
+                        font-weight: bold;
+                    }
+                    
                 </style>
             </head>
             <body>
+                <div id="overlay"></div>
                 <div class="content-wrapper">
                     <div id="msg">Waiting for the presenter to start...</div>
                     <img id="slide" alt="Current Slide" />
                 </div>
                 <script src="/socket.io/socket.io.js"></script>
-            <script>
-                // Force a brand new connection for this tab only
-                const socket = io({
-                    forceNew: true,
-                    reconnectionAttempts: 3,
-                    timeout: 10000,
-                    transports: ['polling', 'websocket']
-                });
+                <script>
+                    // Force a brand new connection for this tab only
+                    const socket = io({
+                        forceNew: true,
+                        reconnectionAttempts: 3,
+                        timeout: 10000,
+                        transports: ['polling', 'websocket']
+                    });
+                
+                    const roomId = "${req.params.id}";
+                
+                    // Ensure we join the room as soon as the connection is established
+                    socket.on('connect', () => {
+                        console.log("Connected with ID: " + socket.id);
+                        socket.emit('join_room', roomId);
+                    });
+                
+                    socket.on('slide_update', (imgData) => {
+                        if(!imgData) return;
+                        document.getElementById('msg').style.display = 'none';
+                        const img = document.getElementById('slide');
+                        img.src = imgData;
+                        img.style.display = 'block';
+                    });
+                
+                    // If the server disconnects, try to reconnect automatically
+                    socket.on('disconnect', () => {
+                        document.getElementById('msg').style.display = 'block';
+                        document.getElementById('msg').innerText = "Reconnecting...";
+                    });
+                </script>
+                <script>
+                    const socket = io({ forceNew: true });
+                    const roomId = "${req.params.id}";
+                    const overlay = document.getElementById('overlay');
             
-                const roomId = "${req.params.id}";
+                    socket.on('connect', () => { socket.emit('join_room', roomId); });
             
-                // Ensure we join the room as soon as the connection is established
-                socket.on('connect', () => {
-                    console.log("Connected with ID: " + socket.id);
-                    socket.emit('join_room', roomId);
-                });
+                    // Handle active/paused status
+                    socket.on('status_change', (status) => {
+                        if (status === 'paused') {
+                            overlay.innerText = "Presenter has left the slideshow mode.";
+                            overlay.style.display = 'block';
+                            overlay.style.background = "rgba(255, 165, 0, 0.8)"; // Orange
+                        } else {
+                            overlay.style.display = 'none';
+                        }
+                    });
             
-                socket.on('slide_update', (imgData) => {
-                    if(!imgData) return;
-                    document.getElementById('msg').style.display = 'none';
-                    const img = document.getElementById('slide');
-                    img.src = imgData;
-                    img.style.display = 'block';
-                });
+                    // Handle room closing (30s timer)
+                    socket.on('room_closing', (seconds) => {
+                        let timeLeft = seconds;
+                        overlay.style.display = 'block';
+                        overlay.style.background = "rgba(255, 0, 0, 0.9)"; // Red
+                        
+                        const timer = setInterval(() => {
+                            overlay.innerText = "Presentation Ended. Redirecting to home in " + timeLeft + "s...";
+                            timeLeft--;
+                            if (timeLeft < 0) {
+                                clearInterval(timer);
+                                window.location.href = '/'; // REDIRECT TO ROOT
+                            }
+                        }, 1000);
+                    });
             
-                // If the server disconnects, try to reconnect automatically
-                socket.on('disconnect', () => {
-                    document.getElementById('msg').style.display = 'block';
-                    document.getElementById('msg').innerText = "Reconnecting...";
-                });
-            </script>
+                    socket.on('slide_update', (imgData) => {
+                        document.getElementById('msg').style.display = 'none';
+                        document.getElementById('slide').src = imgData;
+                        document.getElementById('slide').style.display = 'block';
+                    });
+                </script>
             </body>
         </html>
     `);
