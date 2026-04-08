@@ -179,7 +179,7 @@ app.get('/room/:id', (req, res) => {
                         border-radius: 10px;
                         background: rgba(255,255,255,0.05);
                     }
-                    
+
                     #overlay {
                         position: fixed; 
                         top: 20px; 
@@ -197,13 +197,15 @@ app.get('/room/:id', (req, res) => {
                 </style>
             </head>
             <body>
-                <div id="overlay"></div>
                 <div class="content-wrapper">
-                    <div id="msg">Waiting for the presenter to start...</div>
-                    <img id="slide" alt="Current Slide" />
+                    <div id="msg">
+                        <div style="font-size: 2rem; color: #00d2ff; margin-bottom: 10px;">Room Joined</div>
+                        Waiting for the presenter to start the slideshow...
                 </div>
+                <img id="slide" />
                 <script src="/socket.io/socket.io.js"></script>
                 <script>
+                
                     // Force a brand new connection for this tab only
                     const socket = io({
                         forceNew: true,
@@ -211,8 +213,10 @@ app.get('/room/:id', (req, res) => {
                         timeout: 10000,
                         transports: ['polling', 'websocket']
                     });
-                
                     const roomId = "${req.params.id}";
+                    const msgBox = document.getElementById('msg');
+                    const slideImg = document.getElementById('slide');
+                    const overlay = document.getElementById('overlay');
                 
                     // Ensure we join the room as soon as the connection is established
                     socket.on('connect', () => {
@@ -222,56 +226,25 @@ app.get('/room/:id', (req, res) => {
                 
                     socket.on('slide_update', (imgData) => {
                         if(!imgData) return;
-                        document.getElementById('msg').style.display = 'none';
-                        const img = document.getElementById('slide');
-                        img.src = imgData;
-                        img.style.display = 'block';
+                        msgBox.style.display.style.display = 'none';
+                        slideImg.src = imgData;
+                        slideImg.style.display = 'block';
+                        overlay.style.display = 'none';
+                    });
+
+                    socket.on('status_change', (status) => {
+                        if (status === 'paused') {
+                            overlay.innerText = "Presenter has left the slideshow.";
+                            overlay.style.display = 'block';
+                        } else if (status === 'active') {
+                            overlay.style.display = 'none';
+                        }
                     });
                 
                     // If the server disconnects, try to reconnect automatically
                     socket.on('disconnect', () => {
                         document.getElementById('msg').style.display = 'block';
                         document.getElementById('msg').innerText = "Reconnecting...";
-                    });
-                </script>
-                <script>
-                    const socket = io({ forceNew: true });
-                    const roomId = "${req.params.id}";
-                    const overlay = document.getElementById('overlay');
-            
-                    socket.on('connect', () => { socket.emit('join_room', roomId); });
-            
-                    // Handle active/paused status
-                    socket.on('status_change', (status) => {
-                        if (status === 'paused') {
-                            overlay.innerText = "Presenter has left the slideshow mode.";
-                            overlay.style.display = 'block';
-                            overlay.style.background = "rgba(255, 165, 0, 0.8)"; // Orange
-                        } else {
-                            overlay.style.display = 'none';
-                        }
-                    });
-            
-                    // Handle room closing (30s timer)
-                    socket.on('room_closing', (seconds) => {
-                        let timeLeft = seconds;
-                        overlay.style.display = 'block';
-                        overlay.style.background = "rgba(255, 0, 0, 0.9)"; // Red
-                        
-                        const timer = setInterval(() => {
-                            overlay.innerText = "Presentation Ended. Redirecting to home in " + timeLeft + "s...";
-                            timeLeft--;
-                            if (timeLeft < 0) {
-                                clearInterval(timer);
-                                window.location.href = '/'; // REDIRECT TO ROOT
-                            }
-                        }, 1000);
-                    });
-            
-                    socket.on('slide_update', (imgData) => {
-                        document.getElementById('msg').style.display = 'none';
-                        document.getElementById('slide').src = imgData;
-                        document.getElementById('slide').style.display = 'block';
                     });
                 </script>
             </body>
