@@ -16,7 +16,7 @@ app.use(express.json({ limit: '20mb' }));
 const activeRooms = {};
 
 // --- NEW: Landing Page (The "/" Route) ---
-app.get('/index', (req, res) => {
+app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
