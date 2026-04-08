@@ -234,46 +234,6 @@ app.get('/room/:id', (req, res) => {
                         document.getElementById('msg').innerText = "Reconnecting...";
                     });
                 </script>
-                <script>
-                    const socket = io({ forceNew: true });
-                    const roomId = "${req.params.id}";
-                    const overlay = document.getElementById('overlay');
-            
-                    socket.on('connect', () => { socket.emit('join_room', roomId); });
-            
-                    // Handle active/paused status
-                    socket.on('status_change', (status) => {
-                        if (status === 'paused') {
-                            overlay.innerText = "Presenter has left the slideshow mode.";
-                            overlay.style.display = 'block';
-                            overlay.style.background = "rgba(255, 165, 0, 0.8)"; // Orange
-                        } else {
-                            overlay.style.display = 'none';
-                        }
-                    });
-            
-                    // Handle room closing (30s timer)
-                    socket.on('room_closing', (seconds) => {
-                        let timeLeft = seconds;
-                        overlay.style.display = 'block';
-                        overlay.style.background = "rgba(255, 0, 0, 0.9)"; // Red
-                        
-                        const timer = setInterval(() => {
-                            overlay.innerText = "Presentation Ended. Redirecting to home in " + timeLeft + "s...";
-                            timeLeft--;
-                            if (timeLeft < 0) {
-                                clearInterval(timer);
-                                window.location.href = '/'; // REDIRECT TO ROOT
-                            }
-                        }, 1000);
-                    });
-            
-                    socket.on('slide_update', (imgData) => {
-                        document.getElementById('msg').style.display = 'none';
-                        document.getElementById('slide').src = imgData;
-                        document.getElementById('slide').style.display = 'block';
-                    });
-                </script>
             </body>
         </html>
     `);
