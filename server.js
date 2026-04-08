@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const { v4: uuidv4 } = require('uuid'); // Install this: npm install uuid
+const { v4: uuidv4 } = require('uuid');
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -56,12 +56,61 @@ app.get('/room/:id', (req, res) => {
     res.send(`
         <html>
             <head>
-                <title>Live Room ${req.params.id}</title>
-                <style>body{background:#111; color:white; display:flex; justify:center; align-items:center; height:100vh; margin:0;} img{max-width:100%; max-height:100%;}</style>
+                <title>Live Presentation - Room ${req.params.id}</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>  
+                    /* 1. Reset and Center everything using Flexbox */
+                    body, html {
+                        margin: 0;
+                        padding: 0;
+                        width: 100%;
+                        height: 100%;
+                        background-color: #1a1a1a; /* Dark background */
+                        color: #ffffff;
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        display: flex;
+                        justify-content: center; /* Horizontal Center */
+                        align-items: center;     /* Vertical Center */
+                        overflow: hidden;        /* Prevent scrollbars */
+                    }
+    
+                    /* 2. Main Content Container */
+                    .content-wrapper {
+                        text-align: center;
+                        width: 95%;
+                        max-width: 1200px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                    }
+    
+                    /* 3. Slide Image Styling */
+                    #slide {
+                        max-width: 100%;
+                        max-height: 90vh; /* Scaled to fit screen height */
+                        box-shadow: 0 10px 50px rgba(0,0,0,0.8);
+                        border-radius: 8px;
+                        display: none; /* Hidden until first slide loads */
+                        transition: opacity 0.5s ease-in-out;
+                    }
+    
+                    /* 4. Waiting Message Styling */
+                    #msg {
+                        font-size: 1.5rem;
+                        font-weight: 300;
+                        padding: 20px;
+                        border: 1px solid #444;
+                        border-radius: 10px;
+                        background: rgba(255,255,255,0.05);
+                    }
+                </style>
             </head>
             <body>
-                <div id="msg">Waiting for slide...</div>
-                <img id="slide" />
+                <div class="content-wrapper">
+                    <div id="msg">Waiting for the presenter to start...</div>
+                    <img id="slide" alt="Current Slide" />
+                </div>
                 <script src="/socket.io/socket.io.js"></script>
                 <script>
                     const socket = io();
