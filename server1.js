@@ -30,7 +30,7 @@ app.post('/api/init', (req, res) => {
 
 // 2. Update Slide (Called by VBA Event)
 app.post('/api/update', (req, res) => {
-    const { roomId, slideImage } = req.body;
+    const { roomId, slideImage, slideIndex } = req.body; 
     if (activeRooms[roomId]) {
         activeRooms[roomId].history[slideIndex] = slideImage;
         activeRooms[roomId].currentVisibleIndex = slideIndex;
