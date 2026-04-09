@@ -57,11 +57,21 @@
                 background: rgba(0,0,0,0.3);
                 display: flex; 
                 flex-direction: column;
-                overflow-x: auto; /* Horizontal scroll */
+                overflow-y: auto; /* Horizontal scroll */
+                overflow-x: hidden; /* ABSOLUTELY prevent horizontal scroll */
                 padding: 15px; 
                 gap: 15px;
                 border-top: 1px solid #333;
                 box-sizing: border-box;
+                
+                /* HIDE SCROLLBAR FOR FIREFOX/IE/EDGE */
+                scrollbar-width: none; 
+                -ms-overflow-style: none; 
+            }
+            
+            /* HIDE SCROLLBAR FOR CHROME, SAFARI, AND NEW EDGE */
+            .history-bar::-webkit-scrollbar {
+                display: none;
             }
 
             /* 3. Main Display Area - 80% width */
