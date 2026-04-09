@@ -120,11 +120,11 @@
         </style>
 </head>
 <body>
-    <div class="content-wrapper">
+    <div class="history-bar" id="historyBar"></div>
+    <div class="main-display">
         <div id="msg">Waiting for the presenter to start...</div>
         <img id="slide" alt="Current Slide" />
     </div>
-    <div class="history-bar" id="historyBar"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -136,10 +136,10 @@
         socket.on('connect', () => { socket.emit('join_room', roomId); });
 
         // Load existing history when joining
-        socket.on('init_history', (history) => {
-            historyBar.innerHTML = ""; // Clear
-            // data.history is an object. Sort keys numerically.
-            const sortedIndices = Object.keys(data.history).sort((a, b) => a - b);
+        socket.on('init_history', (data) => {
+            if (!data || !data.history) return;
+            historyBar.innerHTML = ""; 
+            const sortedIndices = Object.keys(data.history).sort((a, b) => parseInt(a) - parseInt(b));
             sortedIndices.forEach(idx => {
                 upsertThumbnail(data.history[idx], idx);
             });
@@ -220,11 +220,6 @@
             
             // Auto-scroll to the end of history
             historyBar.scrollLeft = historyBar.scrollWidth;
-        }
-
-        function showSlide(imgData) {
-            mainSlide.src = imgData;
-            mainSlide.style.display = 'block';
         }
 
         socket.on('status_update', (msg) => {
