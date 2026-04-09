@@ -58,7 +58,7 @@ app.post('/api/stop', (req, res) => {
 
 // Root Page (The "/" Route) ---
 app.get('/', (req, res) => {
-    res.send(getTemplate('landing.html'));
+    res.send(getTemplate('root.html'));
 });
         
 // 4. Viewer Page (The Frontend)
