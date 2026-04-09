@@ -148,6 +148,7 @@
 
         // Handle live updates
         socket.on('slide_update', (data) => {
+            console.log("Socket received update for index:", data.index);
             upsertThumbnail(data.image, data.index);
             highlightActive(data.index, data.image);
             showSlide(data.image);
