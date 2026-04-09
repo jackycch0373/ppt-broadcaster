@@ -99,7 +99,7 @@ setInterval(() => {
 io.on('connection', (socket) => {
     socket.on('join_room', (roomId) => {
         socket.join(roomId);
-        if (activeRooms[roomId] && activeRooms[roomId].lastImage) {
+        if (activeRooms[roomId]) {
             socket.emit('init_history', {
                 history: activeRooms[roomId].history,
                 currentIndex: activeRooms[roomId].currentVisibleIndex
@@ -107,8 +107,6 @@ io.on('connection', (socket) => {
         }
     });
 });
-
-    
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => console.log('Server running on port ' + PORT));
