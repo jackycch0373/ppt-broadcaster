@@ -42,12 +42,21 @@
 
             /* Waiting Message Styling */
             #msg {
+                position: absolute;
+                top: 50%;
+                left: 50%; 
+                transform: translate(-50%, -50%);
+                z-index: 100;
                 font-size: 1.5rem;
                 font-weight: 300;
-                padding: 20px;
+                padding: 30px;
                 border: 1px solid #444;
                 border-radius: 10px;
-                background: rgba(255,255,255,0.05);
+                background: rgba(0, 0, 0, 0.8); 
+                backdrop-filter: blur(8px);     
+                box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+                text-align: center;
+                pointer-events: none; 
             }
 
             /* History Bar Styling */
@@ -227,7 +236,11 @@
             const msgDiv = document.getElementById('msg');
             msgDiv.innerText = msg;
             msgDiv.style.display = 'block';
-            document.getElementById('slide').style.opacity = '0.3';
+            
+            const slideImg = document.getElementById('slide');
+            if (slideImg) {
+                slideImg.style.opacity = '0.2';
+            }
         });
 
         socket.on('redirect_home', () => { window.location.href = '/'; });
