@@ -50,24 +50,10 @@
                 background: rgba(255,255,255,0.05);
             }
 
-            /* 2. Fixed Caption Header */
-            .history-header {
-                padding: 20px 10px;
-                text-align: center;
-                font-size: 12px;
-                font-weight: bold;
-                letter-spacing: 2px;
-                color: #00d2ff;
-                text-transform: uppercase;
-                border-bottom: 1px solid #333;
-                background: rgba(0,0,0,0.2);
-            }
-
             /* History Bar Styling */
             .history-bar {
                 width: 20%; 
-                height: 90vh;
-                flex: 1; 
+                height: 100vh;
                 background: rgba(0,0,0,0.3);
                 display: flex; 
                 flex-direction: column;
@@ -77,6 +63,10 @@
                 gap: 15px;
                 border-top: 1px solid #333;
                 box-sizing: border-box;
+                
+                /* HIDE SCROLLBAR FOR FIREFOX/IE/EDGE */
+                scrollbar-width: none; 
+                -ms-overflow-style: none; 
             }
 
             /* 3. Main Display Area - 80% width */
@@ -114,13 +104,7 @@
         <div id="msg">Waiting for the presenter to start...</div>
         <img id="slide" alt="Current Slide" />
     </div>
-    
-    <div class="sidebar">
-        <div class="history-header">Slide History</div>
-        <div class="history-bar" id="historyBar">
-            <!-- Thumbnails injected here -->
-        </div>
-    </div>
+    <div class="history-bar" id="historyBar"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
