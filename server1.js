@@ -10,9 +10,10 @@ app.use(express.json({ limit: '20mb' }));
 
 // Memory store for active rooms
 const activeRooms = {};
+
 // read HTML files
 const getTemplate = (name) => {
-    const filePath = path.resolve(__dirname, 'Views', name);
+    const filePath = path.resolve(__dirname, 'view', name);
     if (!fs.existsSync(filePath)) {
         console.error(`File missing: ${filePath}`);
         return `<h1>Error: File ${name} not found</h1>`;
