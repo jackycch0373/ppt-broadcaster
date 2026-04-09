@@ -24,7 +24,7 @@ const getTemplate = (name) => {
 // 1. Initialize a Room 
 app.post('/api/init', (req, res) => {
     const roomId = uuidv4().substring(0, 16); // Generate short unique ID
-    activeRooms[roomId] = { lastImage: null, history: {}, status: 'active',  currentVisibleIndex: null };
+    activeRooms[roomId] = { lastImage: null, history: {}, status: 'active',  currentVisibleIndex: null, lastUpdate: Date.now() };
     res.json({ roomId: roomId, url: `https://${req.get('host')}/room/${roomId}` });
 });
 
@@ -33,6 +33,7 @@ app.post('/api/update', (req, res) => {
     const { roomId, slideImage, slideIndex } = req.body; 
     console.log(`Update received for Room: ${roomId}, Slide Index: ${slideIndex}`);
     if (activeRooms[roomId]) {
+        activeRooms[roomId].lastUpdate = Date.now();
         activeRooms[roomId].history[slideIndex] = slideImage;
         activeRooms[roomId].currentVisibleIndex = slideIndex;
         io.to(roomId).emit('slide_update', {
