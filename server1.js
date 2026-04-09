@@ -24,7 +24,7 @@ const getTemplate = (name) => {
 // 1. Initialize a Room 
 app.post('/api/init', (req, res) => {
     const roomId = uuidv4().substring(0, 16); // Generate short unique ID
-    activeRooms[roomId] = { lastImage: null, history: [], status: 'active'};
+    activeRooms[roomId] = { lastImage: null, history: {}, status: 'active',  currentVisibleIndex: null };
     res.json({ roomId: roomId, url: `https://${req.get('host')}/room/${roomId}` });
 });
 
@@ -32,10 +32,11 @@ app.post('/api/init', (req, res) => {
 app.post('/api/update', (req, res) => {
     const { roomId, slideImage } = req.body;
     if (activeRooms[roomId]) {
-        activeRooms[roomId].history.push(slideImage);
+        activeRooms[roomId].history[slideIndex] = slideImage;
+        activeRooms[roomId].currentVisibleIndex = slideIndex;
         io.to(roomId).emit('slide_update', {
             image: slideImage,
-            index: activeRooms[roomId].history.length - 1
+            index: slideIndex
         });
         res.sendStatus(200);
     } else {
@@ -100,12 +101,11 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         // If room exists, send current image immediately
         if (activeRooms[roomId] && activeRooms[roomId].lastImage) {
-            socket.emit('slide_update', activeRooms[roomId].lastImage);
-            socket.emit('init_history', activeRooms[roomId].history);
-        }
-        
+            history: activeRooms[roomId].history,
+            currentIndex: activeRooms[roomId].currentVisibleIndex
+            });
+        });
     });
-});
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => console.log('Server running on port ' + PORT));
