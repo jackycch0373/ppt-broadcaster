@@ -20,10 +20,11 @@ const getTemplate = (name) => {
     }
     return fs.readFileSync(filePath, 'utf8');
 };
+
 // 1. Initialize a Room 
 app.post('/api/init', (req, res) => {
     const roomId = uuidv4().substring(0, 16); // Generate short unique ID
-    activeRooms[roomId] = { lastImage: null, status: 'active'};
+    activeRooms[roomId] = { lastImage: null, history: [], status: 'active'};
     res.json({ roomId: roomId, url: `https://${req.get('host')}/room/${roomId}` });
 });
 
@@ -31,8 +32,11 @@ app.post('/api/init', (req, res) => {
 app.post('/api/update', (req, res) => {
     const { roomId, slideImage } = req.body;
     if (activeRooms[roomId]) {
-        activeRooms[roomId].lastImage = slideImage;
-        io.to(roomId).emit('slide_update', slideImage);
+        activeRooms[roomId].history.push(slideImage);
+        io.to(roomId).emit('slide_update', {
+            image: slideImage,
+            index: activeRooms[roomId].history.length - 1
+        });
         res.sendStatus(200);
     } else {
         res.status(404).send('Room not found');
@@ -97,7 +101,9 @@ io.on('connection', (socket) => {
         // If room exists, send current image immediately
         if (activeRooms[roomId] && activeRooms[roomId].lastImage) {
             socket.emit('slide_update', activeRooms[roomId].lastImage);
+            socket.emit('init_history', activeRooms[roomId].history);
         }
+        
     });
 });
 
