@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 app.use(express.json({ limit: '20mb' }));
+app.use(express.static('public'));
 
 // Memory store for active rooms
 const activeRooms = {};
@@ -71,6 +72,10 @@ app.post('/api/stop', (req, res) => {
 // Root Page (The "/" Route) ---
 app.get('/', (req, res) => {
     res.send(getTemplate('root.html'));
+});
+
+app.get('/guide', (req, res) => {
+    res.send(getTemplate('guide.html'));
 });
         
 // 4. Viewer Page (The Frontend)
