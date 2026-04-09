@@ -154,6 +154,38 @@
             showSlide(data.image);
         });
 
+        function upsertThumbnail(imgData, index) {
+            msg.style.display = 'none';
+            let container = document.getElementById(`thumb-${index}`);
+            
+            // Create if doesn't exist
+            if (!container) {
+                container = document.createElement('div');
+                container.id = `thumb-${index}`;
+                container.className = 'thumb-container';
+                container.innerHTML = `
+                    <div style="position:relative">
+                        <img src="${imgData}" />
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div class="thumb-label">Slide ${index}</div>
+                `;
+                container.onclick = () => showSlide(imgData);
+                
+                // INSERTION LOGIC: Keep history sorted
+                const children = Array.from(historyBar.children);
+                const nextSibling = children.find(child => parseInt(child.id.split('-')[1]) > index);
+                if (nextSibling) {
+                    historyBar.insertBefore(container, nextSibling);
+                } else {
+                    historyBar.appendChild(container);
+                }
+            } else {
+                // Update image if it already existed
+                container.querySelector('img').src = imgData;
+            }
+        }
+
         function highlightActive(index, imgData) {
             // Remove active class from all
             document.querySelectorAll('.thumb-container').forEach(el => el.classList.remove('active'));
