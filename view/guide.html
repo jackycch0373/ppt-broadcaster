@@ -5,26 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setup Guide - PPT Live</title>
     <style>
-        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; line-height: 1.6; padding: 40px; }
-        .box { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.05); padding: 30px; border-radius: 15px; }
-        h1 { color: #00d2ff; }
-        ol li { margin-bottom: 15px; }
-        code { background: #333; padding: 2px 5px; border-radius: 4px; }
-        .back-btn { display: inline-block; margin-top: 20px; color: #00d2ff; text-decoration: none; }
+        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; line-height: 1.6; padding: 40px; display: flex; justify-content: center; }
+        .box { max-width: 700px; background: rgba(255,255,255,0.05); padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: #00d2ff; margin-top: 0; }
+        .download-box { background: #00d2ff; color: #000; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px; }
+        .download-btn { background: #000; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 10px; }
+        ol li { margin-bottom: 12px; font-size: 1.05rem; }
+        code { background: #333; padding: 2px 6px; border-radius: 4px; color: #00d2ff; }
+        .back-link { display: block; margin-top: 30px; color: #777; text-decoration: none; text-align: center; }
+        .back-link:hover { color: #00d2ff; }
     </style>
 </head>
 <body>
     <div class="box">
         <h1>Presenter Setup Guide</h1>
-        <ol>
-            <li><strong>Download:</strong> Get the <code>.ppam</code> file from the home page.</li>
-            <li><strong>Unblock File:</strong> Right-click the downloaded file > <strong>Properties</strong>. At the bottom, check <strong>Unblock</strong> and click OK. (Required by Windows Security).</li>
-            <li><strong>Open PowerPoint:</strong> Go to <code>File</code> > <code>Options</code> > <code>Add-ins</code>.</li>
-            <li><strong>Install:</strong> At the bottom, set <em>Manage</em> to <strong>PowerPoint Add-ins</strong> and click <strong>Go</strong>.</li>
-            <li><strong>Activate:</strong> Click <strong>Add New</strong>, select the <code>.ppam</code> file, and ensure it is checked in the list.</li>
-            <li><strong>Broadcast:</strong> Use the <strong>"Live Web"</strong> tab now appearing in your PowerPoint Ribbon.</li>
+        
+        <!-- Step 1: Download is now exclusively here -->
+        <div class="download-box">
+            <p style="margin:0; font-weight:bold;">Step 1: Obtain the Plugin</p>
+            <a href="/LivePPTfinal1.ppam" class="download-btn">Download Extension (.ppam)</a>
+        </div>
+
+        <ol start="2">
+            <li><strong>Security Unblock:</strong> Right-click the downloaded <code>.ppam</code> file > <strong>Properties</strong>. Check the <strong>Unblock</strong> checkbox at the bottom and click OK.</li>
+            <li><strong>Installation:</strong> Open PowerPoint, go to <code>File</code> > <code>Options</code> > <code>Add-ins</code>.</li>
+            <li><strong>Add-in Manager:</strong> Select <strong>PowerPoint Add-ins</strong> in the <em>Manage</em> dropdown at the bottom and click <strong>Go</strong>.</li>
+            <li><strong>Activate:</strong> Click <strong>Add New</strong>, select your file, and ensure <code>PPT_Broadcaster</code> is checked.</li>
+            <li><strong>Start:</strong> Click the <strong>"Live Web"</strong> tab now in your Ribbon and press <strong>Start Live</strong>.</li>
         </ol>
-        <a href="/" class="back-btn">← Back to Home</a>
+
+        <a href="/" class="back-link">← Back to Home Page</a>
     </div>
 </body>
 </html>
