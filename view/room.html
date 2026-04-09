@@ -48,11 +48,25 @@
                 border-radius: 10px;
                 background: rgba(255,255,255,0.05);
             }
-                    
-            img {
-                max-width:100%; 
-                max-height:100%;
+
+            /* History Bar Styling */
+            .history-bar {
+            width: 100%; height: 150px;
+            background: rgba(0,0,0,0.5);
+            display: flex; overflow-x: auto; /* Horizontal scroll */
+            padding: 10px; gap: 10px;
+            border-top: 1px solid #333;
             }
+
+            .thumb-container {
+            flex: 0 0 auto; height: 100%; cursor: pointer;
+            border: 2px solid transparent; transition: 0.2s;
+            }
+            .thumb-container:hover { border-color: #00d2ff; }
+            .thumb-container img { height: 100%; border-radius: 4px; }
+            .thumb-label { font-size: 10px; text-align: center; color: #888; }
+                    
+            img { max-width:100%; max-height:100%; }
         </style>
 </head>
 <body>
@@ -60,23 +74,50 @@
         <div id="msg">Waiting for the presenter to start...</div>
         <img id="slide" alt="Current Slide" />
     </div>
+    <div class="history-bar" id="historyBar"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io({ forceNew: true });
         const roomId = "{{ROOM_ID}}";
-        socket.emit('join_room', roomId);
+        const historyBar = document.getElementById('historyBar');
+        const mainSlide = document.getElementById('slide');
+        const msg = document.getElementById('msg');
+        socket.on('connect', () => { socket.emit('join_room', roomId); });
 
-        socket.on('slide_update', (imgData) => {
-            const msg = document.getElementById('msg');
-            const img = document.getElementById('slide');
-                        
-            // Hide message and show image
-            msg.style.display = 'none';
-            img.src = imgData;
-            img.style.display = 'block';
-            img.style.opacity = 1;
+        // Load existing history when joining
+        socket.on('init_history', (history) => {
+            historyBar.innerHTML = ""; // Clear
+            history.forEach((imgData, index) => addThumbnail(imgData, index));
+            if(history.length > 0) showSlide(history[history.length - 1]);
         });
+
+        // Handle live updates
+        socket.on('slide_update', (data) => {
+            addThumbnail(data.image, data.index);
+            showSlide(data.image);
+        });
+
+        function addThumbnail(imgData, index) {
+            msg.style.display = 'none';
+            const container = document.createElement('div');
+            container.className = 'thumb-container';
+            container.onclick = () => showSlide(imgData);
+            
+            container.innerHTML = `
+                <img src="${imgData}" />
+                <div class="thumb-label">Slide ${index + 1}</div>
+            `;
+            historyBar.appendChild(container);
+            
+            // Auto-scroll to the end of history
+            historyBar.scrollLeft = historyBar.scrollWidth;
+        }
+
+        function showSlide(imgData) {
+            mainSlide.src = imgData;
+            mainSlide.style.display = 'block';
+        }
 
         socket.on('status_update', (msg) => {
             // Show a message overlay or alert
@@ -86,9 +127,7 @@
             document.getElementById('slide').style.opacity = '0.3';
         });
 
-        socket.on('redirect_home', () => {
-            window.location.href = '/'; // Kick user back to the welcome page
-        });
+        socket.on('redirect_home', () => { window.location.href = '/'; });
 
     </script>
 </body>
