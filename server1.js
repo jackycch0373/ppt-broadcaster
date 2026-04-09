@@ -99,13 +99,14 @@ setInterval(() => {
 io.on('connection', (socket) => {
     socket.on('join_room', (roomId) => {
         socket.join(roomId);
-        // If room exists, send current image immediately
         if (activeRooms[roomId] && activeRooms[roomId].lastImage) {
-            history: activeRooms[roomId].history,
-            currentIndex: activeRooms[roomId].currentVisibleIndex
+            socket.emit('init_history', {
+                history: activeRooms[roomId].history,
+                currentIndex: activeRooms[roomId].currentVisibleIndex
             });
-        });
+        }
     });
+});
 
     
 
