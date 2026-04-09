@@ -87,6 +87,26 @@
                 background: #000; 
                 overflow: hidden;
             }
+
+            /* Highlight for the active slide */
+            .thumb-container.active {
+                border-color: #ff9d00 !important; /* Orange border */
+                box-shadow: 0 0 15px rgba(255, 157, 0, 0.5);
+            }
+        
+            .thumb-container.active .thumb-label {
+                background: #ff9d00;
+                color: #000;
+                font-weight: bold;
+            }
+        
+            /* Live Badge for active slide */
+            .live-badge {
+                position: absolute; top: 5px; right: 5px;
+                background: #ff0000; color: white; font-size: 8px;
+                padding: 2px 5px; border-radius: 3px; display: none;
+            }
+            .active .live-badge { display: block; }
             
             .thumb-container:hover { border-color: #00d2ff; transform: scale(1.02); }
             .thumb-container img { width: 100%; border-radius: 4px; display: block; }
@@ -118,15 +138,40 @@
         // Load existing history when joining
         socket.on('init_history', (history) => {
             historyBar.innerHTML = ""; // Clear
-            history.forEach((imgData, index) => addThumbnail(imgData, index));
-            if(history.length > 0) showSlide(history[history.length - 1]);
+            // data.history is an object. Sort keys numerically.
+            const sortedIndices = Object.keys(data.history).sort((a, b) => a - b);
+            sortedIndices.forEach(idx => {
+                upsertThumbnail(data.history[idx], idx);
+            });
+            if(data.currentIndex) highlightActive(data.currentIndex, data.history[data.currentIndex]);
         });
 
         // Handle live updates
         socket.on('slide_update', (data) => {
-            addThumbnail(data.image, data.index);
+            upsertThumbnail(data.image, data.index);
+            highlightActive(data.index, data.image);
             showSlide(data.image);
         });
+
+        function highlightActive(index, imgData) {
+            // Remove active class from all
+            document.querySelectorAll('.thumb-container').forEach(el => el.classList.remove('active'));
+            
+            // Add to current
+            const current = document.getElementById(`thumb-${index}`);
+            if (current) {
+                current.classList.add('active');
+                // Scroll thumbnail into view
+                current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            showSlide(imgData);
+        }
+
+        function showSlide(imgData) {
+            const mainSlide = document.getElementById('slide');
+            mainSlide.src = imgData;
+            mainSlide.style.display = 'block';
+        }
 
         function addThumbnail(imgData, index) {
             msg.style.display = 'none';
