@@ -12,9 +12,13 @@ app.use(express.json({ limit: '20mb' }));
 const activeRooms = {};
 // read HTML files
 const getTemplate = (name) => {
-    return fs.readFileSync(path.join(__dirname, 'views', name), 'utf8');
+    const filePath = path.resolve(__dirname, 'views', name);
+    if (!fs.existsSync(filePath)) {
+        console.error(`File missing: ${filePath}`);
+        return `<h1>Error: File ${name} not found</h1>`;
+    }
+    return fs.readFileSync(filePath, 'utf8');
 };
-
 // 1. Initialize a Room 
 app.post('/api/init', (req, res) => {
     const roomId = uuidv4().substring(0, 16); // Generate short unique ID
