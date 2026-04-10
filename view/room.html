@@ -131,6 +131,14 @@
 <body>
     <div class="history-bar" id="historyBar"></div>
     <div class="main-display">
+        <a href="/room/{{ROOM_ID}}/elements" target="_blank" 
+           style="position: absolute; top: 15px; right: 20px; z-index: 105; 
+                  color: #00d2ff; text-decoration: none; font-size: 13px; 
+                  background: rgba(0,0,0,0.6); padding: 8px 15px; 
+                  border: 1px solid #444; border-radius: 5px; 
+                  backdrop-filter: blur(5px); font-weight: bold;">
+            Interactive Objects List
+        </a>
         <div id="msg">Waiting for the presenter to start...</div>
         <img id="slide" alt="Current Slide" />
     </div>
@@ -163,8 +171,10 @@
             showSlide(data.image);
         });
 
-        function upsertThumbnail(imgData, index) {
+        function upsertThumbnail(slideData, index) {
             msg.style.display = 'none';
+            const imgSrc = slideData.image || slideData; // Handle both old and new data formats
+            const hasElements = slideData.elements && slideData.elements.length > 0;
             let container = document.getElementById(`thumb-${index}`);
             
             // Create if doesn't exist
@@ -173,11 +183,12 @@
                 container.id = `thumb-${index}`;
                 container.className = 'thumb-container';
                 container.innerHTML = `
-                    <div style="position:relative">
-                        <img src="${imgData}" />
-                        <span class="live-badge">LIVE</span>
-                    </div>
-                    <div class="thumb-label">Slide ${index}</div>
+                <div style="position:relative">
+                    <img src="${imgSrc}" />
+                    ${hasElements ? '<span style="position:absolute; bottom:5px; left:5px; background:blue; font-size:10px; padding:2px;">⚡ Info</span>' : ''}
+                    <span class="live-badge">LIVE</span>
+                </div>
+                <div class="thumb-label">Slide ${index}</div>
                 `;
                 container.onclick = () => showSlide(imgData);
                 
