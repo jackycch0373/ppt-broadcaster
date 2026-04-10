@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Presentation - Room {{ROOM_ID}}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                background-color: #1a1a1a;
+                color: #ffffff;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                overflow: hidden;     
+            }
+
+            /* Main Content Container */
+            .content-wrapper {
+                text-align: center;
+                width: 95%;
+                max-width: 1200px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            /* Slide Image Styling */
+            #slide {
+                max-width: 100%;
+                max-height: 90vh; /* Scaled to fit screen height */
+                box-shadow: 0 10px 50px rgba(0,0,0,0.8);
+                border-radius: 8px;
+                display: none; /* Hidden until first slide loads */
+                transition: opacity 0.5s ease-in-out;
+            }
+
+            /* Waiting Message Styling */
+            #msg {
+                position: absolute;
+                top: 50%;
+                left: 50%; 
+                transform: translate(-50%, -50%);
+                z-index: 100;
+                font-size: 1.5rem;
+                font-weight: 300;
+                padding: 30px;
+                border: 1px solid #444;
+                border-radius: 10px;
+                background: rgba(0, 0, 0, 0.8); 
+                backdrop-filter: blur(8px);     
+                box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+                text-align: center;
+                pointer-events: none; 
+            }
+
+            /* History Bar Styling */
+            .history-bar {
+                width: 20%; 
+                height: 100vh;
+                background: rgba(0,0,0,0.3);
+                display: flex; 
+                flex-direction: column;
+                overflow-y: auto; /* Horizontal scroll */
+                overflow-x: hidden; /* ABSOLUTELY prevent horizontal scroll */
+                padding: 15px; 
+                gap: 15px;
+                border-top: 1px solid #333;
+                box-sizing: border-box;
+                
+                /* HIDE SCROLLBAR FOR FIREFOX/IE/EDGE */
+                scrollbar-width: none; 
+                -ms-overflow-style: none; 
+            }
+
+            /* 3. Main Display Area - 80% width */
+            .main-display {
+                width: 80%; height: 100vh;
+                display: flex; justify-content: center; align-items: center;
+                padding: 30px; box-sizing: border-box;
+                position: relative;
+            }
+
+            .thumb-container {
+                flex: 0 0 auto; 
+                width: 100%; 
+                cursor: pointer;
+                border: 2px solid transparent; 
+                transition: 0.2s;
+                border-radius: 6px;
+                background: #000; 
+                overflow: hidden;
+            }
+
+            /* Highlight for the active slide */
+            .thumb-container.active {
+                border-color: #ff9d00 !important; /* Orange border */
+                box-shadow: 0 0 15px rgba(255, 157, 0, 0.5);
+            }
+        
+            .thumb-container.active .thumb-label {
+                background: #ff9d00;
+                color: #000;
+                font-weight: bold;
+            }
+        
+            /* Live Badge for active slide */
+            .live-badge {
+                position: absolute; top: 5px; right: 5px;
+                background: #ff0000; color: white; font-size: 8px;
+                padding: 2px 5px; border-radius: 3px; display: none;
+            }
+            .active .live-badge { display: block; }
+            
+            .thumb-container:hover { border-color: #00d2ff; transform: scale(1.02); }
+            .thumb-container img { width: 100%; border-radius: 4px; display: block; }
+            .thumb-label { font-size: 10px; text-align: center; color: #888; padding: 4px; background: #222; }
+            img { max-width:100%; max-height:100%; }
+            /* Custom Scrollbar for the Sidebar */
+            .history-bar::-webkit-scrollbar { width: 6px; }
+            .history-bar::-webkit-scrollbar-track { background: transparent; }
+            .history-bar::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+            
+        </style>
+</head>
+<body>
+    <div class="history-bar" id="historyBar"></div>
+    <div class="main-display">
+        <div id="msg">Waiting for the presenter to start...</div>
+        <img id="slide" alt="Current Slide" />
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({ forceNew: true });
+        const roomId = "{{ROOM_ID}}";
+        const historyBar = document.getElementById('historyBar');
+        const mainSlide = document.getElementById('slide');
+        const msg = document.getElementById('msg');
+        socket.on('connect', () => { socket.emit('join_room', roomId); });
+
+        // Load existing history when joining
+        socket.on('init_history', (data) => {
+            if (!data || !data.history) return;
+            historyBar.innerHTML = ""; 
+            const sortedIndices = Object.keys(data.history).sort((a, b) => parseInt(a) - parseInt(b));
+            sortedIndices.forEach(idx => {
+                upsertThumbnail(data.history[idx], idx);
+            });
+            if(data.currentIndex) highlightActive(data.currentIndex, data.history[data.currentIndex]);
+        });
+
+        // Handle live updates
+        socket.on('slide_update', (data) => {
+            console.log("Socket received update for index:", data.index);
+            upsertThumbnail(data.image, data.index);
+            highlightActive(data.index, data.image);
+            showSlide(data.image);
+        });
+
+        function upsertThumbnail(imgData, index) {
+            msg.style.display = 'none';
+            let container = document.getElementById(`thumb-${index}`);
+            
+            // Create if doesn't exist
+            if (!container) {
+                container = document.createElement('div');
+                container.id = `thumb-${index}`;
+                container.className = 'thumb-container';
+                container.innerHTML = `
+                    <div style="position:relative">
+                        <img src="${imgData}" />
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div class="thumb-label">Slide ${index}</div>
+                `;
+                container.onclick = () => showSlide(imgData);
+                
+                // INSERTION LOGIC: Keep history sorted
+                const children = Array.from(historyBar.children);
+                const nextSibling = children.find(child => parseInt(child.id.split('-')[1]) > index);
+                if (nextSibling) {
+                    historyBar.insertBefore(container, nextSibling);
+                } else {
+                    historyBar.appendChild(container);
+                }
+            } else {
+                // Update image if it already existed
+                container.querySelector('img').src = imgData;
+            }
+        }
+
+        function highlightActive(index, imgData) {
+            // Remove active class from all
+            document.querySelectorAll('.thumb-container').forEach(el => el.classList.remove('active'));
+            
+            // Add to current
+            const current = document.getElementById(`thumb-${index}`);
+            if (current) {
+                current.classList.add('active');
+                // Scroll thumbnail into view
+                current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            showSlide(imgData);
+        }
+
+        function showSlide(imgData) {
+            const mainSlide = document.getElementById('slide');
+            mainSlide.src = imgData;
+            mainSlide.style.display = 'block';
+        }
+
+        function addThumbnail(imgData, index) {
+            msg.style.display = 'none';
+            const container = document.createElement('div');
+            container.className = 'thumb-container';
+            container.onclick = () => showSlide(imgData);
+            
+            container.innerHTML = `
+                <img src="${imgData}" />
+                <div class="thumb-label">Slide ${index + 1}</div>
+            `;
+            historyBar.appendChild(container);
+            
+            // Auto-scroll to the end of history
+            historyBar.scrollLeft = historyBar.scrollWidth;
+        }
+
+        socket.on('status_update', (msg) => {
+            // Show a message overlay or alert
+            const msgDiv = document.getElementById('msg');
+            msgDiv.innerText = msg;
+            msgDiv.style.display = 'block';
+            
+            const slideImg = document.getElementById('slide');
+            if (slideImg) {
+                slideImg.style.opacity = '0.2';
+            }
+        });
+
+        socket.on('redirect_home', () => { window.location.href = '/'; });
+
+    </script>
+</body>
+</html>

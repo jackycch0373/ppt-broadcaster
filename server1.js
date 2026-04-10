@@ -31,20 +31,15 @@ app.post('/api/init', (req, res) => {
 
 // 2. Update Slide (Called by VBA Event)
 app.post('/api/update', (req, res) => {
-    const { roomId, slideImage, slideIndex, elements } = req.body; 
+    const { roomId, slideImage, slideIndex } = req.body; 
     console.log(`Update received for Room: ${roomId}, Slide Index: ${slideIndex}`);
     if (activeRooms[roomId]) {
         activeRooms[roomId].lastUpdate = Date.now();
-        activeRooms[roomId].history[slideIndex] = { 
-            image: slideImage, 
-            elements: elements || [] // Store elements array
-        };
+        activeRooms[roomId].history[slideIndex] = slideImage;
         activeRooms[roomId].currentVisibleIndex = slideIndex;
-        activeRooms[roomId].lastUpdate = Date.now();
         io.to(roomId).emit('slide_update', {
             image: slideImage,
-            index: slideIndex,
-            elements: elements || []
+            index: slideIndex
         });
         res.sendStatus(200);
     } else {
@@ -95,15 +90,6 @@ app.get('/room/:id', (req, res) => {
     html = html.replace(/{{ROOM_ID}}/g, roomId);
     res.send(html);
 
-});
-
-app.get('/room/:id/elements', (req, res) => {
-    const roomId = req.params.id;
-    if (!activeRooms[roomId]) return res.redirect('/');
-    
-    let html = getTemplate('elements.html');
-    html = html.replace(/{{ROOM_ID}}/g, roomId);
-    res.send(html);
 });
 
 setInterval(() => {
