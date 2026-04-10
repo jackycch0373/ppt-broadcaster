@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interactive Elements - Room {{ROOM_ID}}</title>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: sans-serif; padding: 20px; }
+        .item { background: #333; margin-bottom: 10px; padding: 15px; border-left: 5px solid #00d2ff; border-radius: 4px; }
+        .slide-num { font-weight: bold; color: #ff9d00; margin-right: 10px; }
+        .type-tag { font-size: 0.8em; background: #555; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; }
+        a { color: #00d2ff; }
+    </style>
+</head>
+<body>
+    <h1>Presentation Interactive Objects</h1>
+    <div id="elementsList">Loading...</div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        socket.emit('join_room', "{{ROOM_ID}}");
+
+        socket.on('init_history', (data) => {
+            const list = document.getElementById('elementsList');
+            list.innerHTML = "";
+            
+            Object.keys(data.history).sort((a,b) => a-b).forEach(idx => {
+                const slide = data.history[idx];
+                if (slide.elements && slide.elements.length > 0) {
+                    slide.elements.forEach(el => {
+                        const div = document.createElement('div');
+                        div.className = 'item';
+                        const valDisplay = el.type === 'link' ? `<a href="${el.val}" target="_blank">${el.val}</a>` : el.val;
+                        div.innerHTML = `<span class="slide-num">Slide ${idx}</span> <span class="type-tag">${el.type}</span><br>${valDisplay}`;
+                        list.appendChild(div);
+                    });
+                }
+            });
+            if (list.innerHTML === "") list.innerHTML = "No interactive elements found yet.";
+        });
+    </script>
+</body>
+</html>
