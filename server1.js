@@ -43,7 +43,7 @@ app.post('/api/update', (req, res) => {
         activeRooms[roomId].lastUpdate = Date.now();
         io.to(roomId).emit('slide_update', {
             image: slideImage,
-            index: slideIndex
+            index: slideIndex,
             elements: elements || []
         });
         res.sendStatus(200);
