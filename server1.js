@@ -22,14 +22,14 @@ const getTemplate = (name) => {
     return fs.readFileSync(filePath, 'utf8');
 };
 
-// 1. Initialize a Room 
+// Initialize a Room 
 app.post('/api/init', (req, res) => {
     const roomId = uuidv4().substring(0, 16); // Generate short unique ID
     activeRooms[roomId] = { lastImage: null, history: {}, status: 'active',  currentVisibleIndex: null, lastUpdate: Date.now() };
     res.json({ roomId: roomId, url: `https://${req.get('host')}/room/${roomId}` });
 });
 
-// 2. Update Slide (Called by VBA Event)
+// Update Slide (Called by VBA Event)
 app.post('/api/update', (req, res) => {
     const { roomId, slideImage, slideIndex } = req.body; 
     console.log(`Update received for Room: ${roomId}, Slide Index: ${slideIndex}`);
@@ -47,21 +47,21 @@ app.post('/api/update', (req, res) => {
     }
 });
 
-// 3. Stop Presentation (Called by VBA Stop)
+// Stop Presentation (Called by VBA Stop)
 app.post('/api/stop', (req, res) => {
     const { roomId } = req.body;
     if (activeRooms[roomId]) {
         activeRooms[roomId].status = 'ending';
         
-        // 1. Tell all current viewers that it's ending
+        // Tell all current viewers that it's ending
         io.to(roomId).emit('status_update', 'The presenter has stopped the live. Redirecting to homepage in 1 minute...');
         
-        // 2. Set the 60-second timer
+        // Set the 60-second timer
         setTimeout(() => {
-            // Send the final redirect command to all clients in the room
+            // Send the redirect command to all clients in the room
             io.to(roomId).emit('redirect_home');
             
-            // 3. ABORT: Completely wipe the room from server memory
+            // Completely wipe the room from server memory
             delete activeRooms[roomId]; 
             console.log(`Room ${roomId} has been purged and aborted.`);
         }, 60000); 
@@ -69,7 +69,7 @@ app.post('/api/stop', (req, res) => {
     } else res.status(404).send('Room not found.');
 });
 
-// Root Page (The "/" Route) ---
+// Root Page
 app.get('/', (req, res) => {
     res.send(getTemplate('root.html'));
 });
@@ -78,7 +78,7 @@ app.get('/guide', (req, res) => {
     res.send(getTemplate('guide.html'));
 });
         
-// 4. Viewer Page (The Frontend)
+// Viewer Page
 app.get('/room/:id', (req, res) => {
     const roomId = req.params.id;
 
@@ -86,7 +86,6 @@ app.get('/room/:id', (req, res) => {
     if (!activeRooms[roomId]) return res.redirect('/');
 
     let html = getTemplate('room.html');
-    // Inject the real Room ID into the placeholder
     html = html.replace(/{{ROOM_ID}}/g, roomId);
     res.send(html);
 
