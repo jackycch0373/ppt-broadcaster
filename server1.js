@@ -35,7 +35,7 @@ app.post('/api/update', (req, res) => {
     console.log(`Update received for Room: ${roomId}, Slide Index: ${slideIndex}`);
     if (activeRooms[roomId]) {
         activeRooms[roomId].lastUpdate = Date.now();
-        activeRooms[roomId].history[slideIndex] = = { 
+        activeRooms[roomId].history[slideIndex] = { 
             image: slideImage, 
             elements: elements || [] // Store elements array
         };
