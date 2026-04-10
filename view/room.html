@@ -181,7 +181,6 @@
                 `;
                 container.onclick = () => showSlide(imgData);
                 
-                // INSERTION LOGIC: Keep history sorted
                 const children = Array.from(historyBar.children);
                 const nextSibling = children.find(child => parseInt(child.id.split('-')[1]) > index);
                 if (nextSibling) {
@@ -196,10 +195,8 @@
         }
 
         function highlightActive(index, imgData) {
-            // Remove active class from all
             document.querySelectorAll('.thumb-container').forEach(el => el.classList.remove('active'));
             
-            // Add to current
             const current = document.getElementById(`thumb-${index}`);
             if (current) {
                 current.classList.add('active');
@@ -226,8 +223,6 @@
                 <div class="thumb-label">Slide ${index + 1}</div>
             `;
             historyBar.appendChild(container);
-            
-            // Auto-scroll to the end of history
             historyBar.scrollLeft = historyBar.scrollWidth;
         }
 
