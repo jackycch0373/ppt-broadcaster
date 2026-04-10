@@ -31,7 +31,7 @@ app.post('/api/init', (req, res) => {
 
 // 2. Update Slide (Called by VBA Event)
 app.post('/api/update', (req, res) => {
-    const { roomId, slideImage, slideIndex, elements  } = req.body; 
+    const { roomId, slideImage, slideIndex, elements } = req.body; 
     console.log(`Update received for Room: ${roomId}, Slide Index: ${slideIndex}`);
     if (activeRooms[roomId]) {
         activeRooms[roomId].lastUpdate = Date.now();
@@ -40,6 +40,7 @@ app.post('/api/update', (req, res) => {
             elements: elements || [] // Store elements array
         };
         activeRooms[roomId].currentVisibleIndex = slideIndex;
+        activeRooms[roomId].lastUpdate = Date.now();
         io.to(roomId).emit('slide_update', {
             image: slideImage,
             index: slideIndex
